@@ -55,12 +55,23 @@ download_release() {
   version="$1"
   platform="$(get_platform)"
   architecture="$(get_system_architecture)"
+  fallback_architecture=""
+  if [[ "$platform" == "darwin" && "$architecture" == "arm64" ]] ; then
+    fallback_architecture="amd64"
+  fi
   filename="$2"
 
   url="$GH_REPO/releases/download/v${version}/furyctl-${platform}-${architecture}.tar.gz"
 
   echo "* Downloading $TOOL_NAME release $version..."
-  curl "${curl_opts[@]}" -o "$filename" -C - "$url" || fail "Could not download $url"
+  # curl "${curl_opts[@]}" -o "$filename" -C - "$url" || fail "Could not download $url"
+  curl "${curl_opts[@]}" -o "$filename" -C - "$url"
+  result=$?
+  if [[ "${result}" -ne 0 ]] && [[ ! -z "${fallback_architecture}" ]]; then
+      echo "Failed to download Furyctl from ${url}"
+      echo "Fallback: downloading Furyctl for ${fallback_architecture}"
+      curl "${curl_opts[@]}" -C -"$GH_REPO/releases/download/v${version}/furyctl-${platform}-${fallback_architecture}.tar.gz" -o "$filename"
+  fi
 }
 
 install_version() {
